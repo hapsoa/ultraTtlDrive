@@ -1,13 +1,19 @@
 html
 	head
-		link(rel='stylesheet', href='/stylesheets/20180805/dragDrop.css')
-		link(link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.1/css/all.css"
+		// font
+		link(rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.1/css/all.css"
 		integrity="sha384-O8whS3fhG2OnA5Kas0Y9l3cfpmYjapjI0E4theH4iuMD+pLhbf6JI0jIMfYcK3yZ" crossorigin="anonymous")
 		link(href='https://fonts.googleapis.com/icon?family=Material+Icons',
 		rel='stylesheet')
+		// jQuery
 		script(src="https://code.jquery.com/jquery-3.3.1.js",
 		integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60=",
 		crossorigin="anonymous")
+		//firebase
+		script(src="https://www.gstatic.com/firebasejs/5.3.1/firebase.js")
+		script(src="/javascripts/initializeFirebase.js")
+		// css
+		link(rel='stylesheet', href='/stylesheets/20180805/dragDrop.css')
 
 	body
 		.side-bar-cover(type='true')

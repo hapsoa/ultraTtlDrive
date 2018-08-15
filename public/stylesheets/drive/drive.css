@@ -1,4 +1,7 @@
 @import url("https://fonts.googleapis.com/css?family=Hind+Madurai:400,500,700|Roboto:400,500,700");
+.display-none {
+  display: none; }
+
 * {
   box-sizing: border-box; }
 
@@ -814,4 +817,4 @@ body {
     transform: scale(0, 0);
     animation: .3s ease-in-out both undoBounce; }
 
-/*# sourceMappingURL=dragDrop.css.map */
+/*# sourceMappingURL=drive.css.map */

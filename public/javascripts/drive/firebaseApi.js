@@ -2,23 +2,53 @@ const firebaseStore = new function () { // database
     // Initialize Cloud Firestore through Firebase
     const db = firebase.firestore();
 
-    this.createUser = (user) => {
-        // Add a new document in collection "cities"
-        db.collection("users").doc(user.uid).set({
-            name: "Los Angeles",
-            state: "CA",
-            country: "USA"
-        })
-            .then(function() {
+    const createUser = (user) => {
+        const data = {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            photoURL: user.photoURL,
+            createdAt: new Date().getTime(),
+            signAt: new Date().getTime(),
+        };
+
+        db.collection("users").doc(user.uid).set(data)
+            .then(function () {
                 console.log("Document successfully written!");
             })
-            .catch(function(error) {
+            .catch(function (error) {
                 console.error("Error writing document: ", error);
             });
 
     };
 
-    this.signInUser = () => {
+    this.signInUser = (user) => {
+
+        const userRef = db.collection("users").doc("user.uid");
+
+        userRef.get().then(function(doc) {
+            if (doc.exists) {
+                const data = {
+                    displayName: user.displayName,
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    signAt: new Date().getTime(),
+                };
+
+                userRef.update(data)
+                    .then(function () {
+                        console.log("Document successfully updated!");
+                    })
+                    .catch(function (error) {
+                        // The document probably doesn't exist.
+                        console.error("Error updating document: ", error);
+                    });
+            } else {
+                createUser(user);
+            }
+        }).catch(function(error) {
+            console.log("Error getting document:", error);
+        });
 
     };
 
@@ -43,8 +73,8 @@ const firebaseApi = new function () {
             // The signed-in user info.
             var user = result.user;
             // ...
-
             console.log('login');
+            firebaseStore.signInUser(user);
         }).catch(function (error) {
             // Handle Errors here.
             var errorCode = error.code;

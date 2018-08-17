@@ -13,8 +13,15 @@ const uiController = new function() {
             // 로그아웃 상태 -> 로그인
             firebaseApi.signIn();
 
-            // 로그인 상태로 화면은 전환해준다.
+            // 로그인 상태로 화면을 전환해준다.
             $logInOutButton.attr('type', 'login');
+
+            const $profileField = $('.nav-profile-field');
+
+            $profileField.find('.nick-name-grid').text("heo");
+            $profileField.find('.email-grid').text("hapsoa");
+
+
         }
         else {
             // 로그인 상태 -> 로그아웃
@@ -33,3 +40,5 @@ const uiController = new function() {
 
 
 };
+
+firebaseApi.setSignInListener

@@ -9,6 +9,8 @@ html
     script(src="https://code.jquery.com/jquery-3.3.1.js",
     integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60=",
     crossorigin="anonymous")
+    // lodash
+    script(src="/lodash/lodash.js")
     //firebase
     script(src="/firebase/firebase.js")
     script(src="/javascripts/initializeFirebase.js")
@@ -172,7 +174,7 @@ html
 
     .browse-button.flex.align-center.display-none
       i.fas.fa-plus
-      input(type="file").display-none
+      input(type="file" multiple).display-none#hiddenUploadButton
     .upload-condition-zone.flex
       //.upload-field.flex.flex-1.align-center
           .description-button-grid.flex.align-center
@@ -183,7 +185,7 @@ html
               .button.flex.align-center Browse
 
       //square
-      .card-part.flex(type='square')
+      .card-part.flex#dropbox(type='square')
         .card-cover-cell
           .sights-card-cell
             .sights-photo-div.flex.align-center.type-sound-color

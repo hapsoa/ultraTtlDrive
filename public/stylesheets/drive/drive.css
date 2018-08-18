@@ -607,9 +607,10 @@ body {
 .card-part {
   flex: 1;
   max-height: 100%;
-  height: fit-content;
+  height: 100%;
   padding: 32px 32px;
-  flex-flow: wrap;
+  flex-wrap: wrap;
+  align-content: flex-start;
   overflow: auto;
   width: 100%; }
   .card-part::-webkit-scrollbar {

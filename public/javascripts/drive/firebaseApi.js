@@ -2,6 +2,10 @@ const firestore = firebase.firestore();
 const settings = {/* your settings... */ timestampsInSnapshots: true};
 firestore.settings(settings);
 
+
+/**
+ * Database
+ */
 const firebaseStore = new function () { // database
     // Initialize Cloud Firestore through Firebase
     const db = firebase.firestore();
@@ -13,7 +17,7 @@ const firebaseStore = new function () { // database
             email: user.email,
             photoURL: user.photoURL,
             createdAt: new Date().getTime(),
-            signAt: new Date().getTime(),
+            signAt: new Date().getTime()
         };
 
         db.collection("users").doc(user.uid).set(data)
@@ -62,12 +66,53 @@ const firebaseStore = new function () { // database
 
     };
 
+    this.writeFileMetaData = (file) => {
+        const currentUser = firebase.auth().currentUser;
+
+        db.collection("files").add({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            uploader: currentUser.uid,
+            lastModified: file.lastModified,
+            lastModifiedDate: file.lastModifiedDate
+        })
+            .then(function(docRef) {
+                console.log("Document written with ID: ", docRef.id);
+            })
+            .catch(function(error) {
+                console.error("Error adding document: ", error);
+            });
+    };
 
 };
 
+
+/**
+ * Cloud storage
+ */
 const firebaseStorage = new function () {
+    const storage = firebase.storage();
+    const storageRef = storage.ref();
 
+    this.writeFile = (file) => {
+        // ref를 설정하고,
+        let fileRef;
+
+        if (file.type.indexOf("image") >= 0) {
+            fileRef = storageRef.child(`images/${file.name}`);
+        } else {
+            fileRef = storageRef.child(`etc/${file.name}`);
+        }
+
+        // 저장을 한다.
+        fileRef.put(file).then(function(snapshot) {
+            console.log('Uploaded a blob or file!');
+        });
+
+    };
 };
+
 
 /**
  * firebase 관련 API 기능을 담은 객체
@@ -77,31 +122,41 @@ const firebaseApi = new function () {
     const provider = new firebase.auth.GoogleAuthProvider();
 
     /**
-     * @parameter : user
+     * Listener
      */
-    let signInListener = null;
-    let signOutListener = null;
+    let onAuthStateChangedListener = null;
 
-    this.setSignInListener = (callback) => {
-        signInListener = callback;
+    this.setOnAuthStateChangedListener = (callback) => {
+        onAuthStateChangedListener = callback;
     };
-    this.setSignOutListener = (callback) => {
-        signOutListener = callback;
-    };
+
+
+    firebase.auth().onAuthStateChanged(async function(user) {
+        if (user) {
+            // User is signed in.
+            var displayName = user.displayName;
+            var email = user.email;
+            var emailVerified = user.emailVerified;
+            var photoURL = user.photoURL;
+            var isAnonymous = user.isAnonymous;
+            var uid = user.uid;
+            var providerData = user.providerData;
+
+            await firebaseStore.signInUser(user);
+            onAuthStateChangedListener(user);
+            console.log('login');
+        } else {
+            // User is signed out.
+
+            onAuthStateChangedListener(null);
+        }
+    });
 
 
     this.signIn = async () => {
 
         try {
-            const result = await firebase.auth().signInWithPopup(provider);
-
-            const user = result.user;
-
-            console.log('login');
-            await firebaseStore.signInUser(user);
-
-            if (signInListener !== null)
-                signInListener(user);
+            await firebase.auth().signInWithPopup(provider);
         } catch (error) {
             // Handle Errors here.
             var errorCode = error.code;
@@ -110,19 +165,21 @@ const firebaseApi = new function () {
             console.log(errorMessage);
         }
 
-
     };
 
     this.signOut = async () => {
         try {
-            await firebase.auth().signOut();
             // Sign-out successful.
-            if (signOutListener !== null)
-                signOutListener();
+            await firebase.auth().signOut();
         } catch (error) {
             // An error happened.
             console.log(error);
         }
+    };
+
+    this.writeFile = (file) => {
+        firebaseStore.writeFileMetaData(file);
+        firebaseStorage.writeFile(file);
     };
 
 

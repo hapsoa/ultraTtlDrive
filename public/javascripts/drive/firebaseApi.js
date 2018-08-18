@@ -26,11 +26,13 @@ const firebaseStore = new function () { // database
 
     };
 
-    this.signInUser = (user) => {
+    this.signInUser = async (user) => {
 
         const userRef = db.collection("users").doc("user.uid");
 
-        userRef.get().then(function(doc) {
+        try {
+            const doc = await userRef.get();
+
             if (doc.exists) {
                 const data = {
                     displayName: user.displayName,
@@ -50,9 +52,13 @@ const firebaseStore = new function () { // database
             } else {
                 createUser(user);
             }
-        }).catch(function(error) {
+        } catch (error) {
             console.log("Error getting document:", error);
-        });
+        }
+
+    };
+
+    this.readUser = () => {
 
     };
 
@@ -70,46 +76,53 @@ const firebaseApi = new function () {
 
     const provider = new firebase.auth.GoogleAuthProvider();
 
+    /**
+     * @parameter : user
+     */
     let signInListener = null;
+    let signOutListener = null;
 
-    function setSignInListener (callback) {
+    this.setSignInListener = (callback) => {
         signInListener = callback;
-    }
+    };
+    this.setSignOutListener = (callback) => {
+        signOutListener = callback;
+    };
 
-    this.signIn = () => {
-        firebase.auth().signInWithPopup(provider).then(function (result) {
-            // This gives you a Google Access Token. You can use it to access the Google API.
-            var token = result.credential.accessToken;
-            // The signed-in user info.
-            var user = result.user;
-            // ...
+
+    this.signIn = async () => {
+
+        try {
+            const result = await firebase.auth().signInWithPopup(provider);
+
+            const user = result.user;
+
             console.log('login');
-            firebaseStore.signInUser(user);
+            await firebaseStore.signInUser(user);
 
             if (signInListener !== null)
-                signInListener();
-
-        }).catch(function (error) {
+                signInListener(user);
+        } catch (error) {
             // Handle Errors here.
             var errorCode = error.code;
             var errorMessage = error.message;
-            // The email of the user's account used.
-            var email = error.email;
-            // The firebase.auth.AuthCredential type that was used.
-            var credential = error.credential;
-            // ...
             console.log(errorCode);
             console.log(errorMessage);
-        });
+        }
+
+
     };
 
-    this.signOut = () => {
-        firebase.auth().signOut().then(function () {
+    this.signOut = async () => {
+        try {
+            await firebase.auth().signOut();
             // Sign-out successful.
-        }).catch(function (error) {
+            if (signOutListener !== null)
+                signOutListener();
+        } catch (error) {
             // An error happened.
             console.log(error);
-        });
+        }
     };
 
 

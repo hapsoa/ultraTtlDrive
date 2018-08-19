@@ -10,6 +10,12 @@ const firebaseStore = new function () { // database
     // Initialize Cloud Firestore through Firebase
     const db = firebase.firestore();
 
+    let writeFileMetaDataListener = null;
+
+    this.setWriteFileMetaDataListener = (callback) => {
+        writeFileMetaDataListener = callback;
+    };
+
     const createUser = (user) => {
         const data = {
             uid: user.uid,
@@ -68,6 +74,21 @@ const firebaseStore = new function () { // database
 
     this.writeFileMetaData = (file) => {
         const currentUser = firebase.auth().currentUser;
+        const filesRef = db.collection("files");
+
+        // 파일이름 중복 체크
+        const query = filesRef.where("name", "==", file.name);
+
+        query.get().then(function(doc) {
+            if (doc.exists) {
+                console.log("Document data:", doc.data());
+            } else {
+                // doc.data() will be undefined in this case
+                console.log("No such document!");
+            }
+        }).catch(function(error) {
+            console.log("Error getting document:", error);
+        });
 
         db.collection("files").add({
             name: file.name,

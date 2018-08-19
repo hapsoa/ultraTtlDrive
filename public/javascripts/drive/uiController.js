@@ -30,10 +30,14 @@ const loginManager = new function() {
             $logInOutButton.find('.nick-name-grid').text(user.displayName);
             $logInOutButton.find('.email-grid').text(user.email);
 
+            $logInOutButton.find('.profile-photo-grid')
+                .css('background-image', `url("${user.photoURL}")`);
+
             $logInOutButton.attr('type', 'login');
+
             $uploadButton.removeClass('display-none');
 
-            updateCards();
+            updateCards(user);
         } else {
             // 로그아웃 상태
             $logInOutButton.attr('type', 'logout');
@@ -43,9 +47,10 @@ const loginManager = new function() {
 
     function updateCards(user) {
         // 해당유저에 대한 정보를 가지고
-        firebaseStore
-
         // 데이터베이스에 있는 정보를 보고,
+
+        firebaseStore.readFilesOfTheUser(user);
+
         // 화면에 출력한다.
     }
 

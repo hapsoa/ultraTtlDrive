@@ -68,41 +68,68 @@ const firebaseStore = new function () { // database
 
     };
 
-    this.readUser = () => {
+    this.readUser = (user) => {
 
     };
 
-    this.writeFileMetaData = (file) => {
+    this.writeFileMetaData = async (file) => {
         const currentUser = firebase.auth().currentUser;
         const filesRef = db.collection("files");
 
         // 파일이름 중복 체크
         const query = filesRef.where("name", "==", file.name);
 
-        query.get().then(function(doc) {
-            if (doc.exists) {
-                console.log("Document data:", doc.data());
-            } else {
-                // doc.data() will be undefined in this case
-                console.log("No such document!");
-            }
-        }).catch(function(error) {
-            console.log("Error getting document:", error);
-        });
+        try {
+            const querySnapshot = await query.get();
 
-        db.collection("files").add({
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            uploader: currentUser.uid,
-            lastModified: file.lastModified,
-            lastModifiedDate: file.lastModifiedDate
-        })
-            .then(function(docRef) {
+            if (!querySnapshot.empty) {
+                console.log('not empty');
+
+                querySnapshot.forEach(async function (doc) {
+                    // doc.data() is never undefined for query doc snapshots
+                    console.log(doc.id, " => ", doc.data());
+
+                    const fileRef = db.collection("files").doc(doc.id);
+
+                    await fileRef.update({
+                        size: file.size,
+                        type: file.type,
+                        lastModified: file.lastModified,
+                        lastModifiedDate: file.lastModifiedDate
+                    });
+
+                })
+            }
+            else {
+                const docRef = await db.collection("files").add({
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    uploader: currentUser.uid,
+                    lastModified: file.lastModified,
+                    lastModifiedDate: file.lastModifiedDate
+                });
                 console.log("Document written with ID: ", docRef.id);
+            }
+
+        } catch (error) {
+            console.log("Error getting documents: ", error);
+        }
+    };
+
+
+    this.readFilesOfTheUser = (user) => {
+        db.collection("files").where("uploader", "==", user.uid)
+            .get()
+            .then(function(querySnapshot) {
+                querySnapshot.forEach(function(doc) {
+                    // doc.data() is never undefined for query doc snapshots
+                    console.log(doc.id, " => ", doc.data());
+                    new Card(doc.data());
+                });
             })
             .catch(function(error) {
-                console.error("Error adding document: ", error);
+                console.log("Error getting documents: ", error);
             });
     };
 
@@ -127,7 +154,7 @@ const firebaseStorage = new function () {
         }
 
         // 저장을 한다.
-        fileRef.put(file).then(function(snapshot) {
+        fileRef.put(file).then(function (snapshot) {
             console.log('Uploaded a blob or file!');
         });
 
@@ -136,6 +163,7 @@ const firebaseStorage = new function () {
 
 
 /**
+ * Firebase API
  * firebase 관련 API 기능을 담은 객체
  */
 const firebaseApi = new function () {
@@ -152,7 +180,7 @@ const firebaseApi = new function () {
     };
 
 
-    firebase.auth().onAuthStateChanged(async function(user) {
+    firebase.auth().onAuthStateChanged(async function (user) {
         if (user) {
             // User is signed in.
             var displayName = user.displayName;
@@ -202,6 +230,7 @@ const firebaseApi = new function () {
         firebaseStore.writeFileMetaData(file);
         firebaseStorage.writeFile(file);
     };
+
 
 
 };

@@ -32,3 +32,19 @@ files {
 	lastModified: file.lastModified,
 	lastModifiedDate: file.lastModifiedDate
 }
+
+
+
+
+저장소 구조
+
+{
+	uid : {
+		image: {
+
+		},
+		audio {
+
+		}
+	}
+}

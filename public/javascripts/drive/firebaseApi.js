@@ -74,11 +74,9 @@ const firebaseStore = new function () { // database
             const querySnapshot = await db.collection("users").where("uid", "==", uid).get();
 
             querySnapshot.forEach(function (doc) {
-                console.log(doc.id, " => ", doc.data());
                 console.log(doc.data().uid);
                 userData = doc.data();
             });
-
 
         }
         catch (error) {
@@ -154,6 +152,10 @@ const firebaseStore = new function () { // database
 
     this.readFilesOfTheUser = async (user) => {
         return await db.collection("files").where("uploader", "==", user.uid).get();
+    };
+
+    this.readFilesInTheType = (user, type) => {
+
     };
 
     this.readAllUsers = async () => {

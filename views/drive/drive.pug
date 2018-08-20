@@ -41,7 +41,8 @@ html
             .storage-description-part
               .category
                 .box.type-image
-                .text IMAGE <i>5%</i>
+                .text IMAGE
+                  i  5%
               .category
                 .box.type-code
                 .text APPLICATION <i>2%</i>
@@ -126,12 +127,12 @@ html
 
     .nav-zone.flex.height-align-center
       .nav-cover-zone(type='nav')
-      .logo-field(type='nav')
+      a.logo-field(href="/" type='nav')
         i.fab.fa-ember
       .input-field.flex.align-center(type='nav')
         .icon-grid.flex.align-center
           i.fas.fa-search
-        input(placeholder='SEARCH')
+        input#search(placeholder='SEARCH')
       .flex-1
       .nav-profile-field.flex.align-center(type='logout')
         .login-logout-cover.flex.align-center

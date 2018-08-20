@@ -41,7 +41,7 @@ const loginManager = new function () {
             await friendsBarManager.setupUsers();
             friendsBarManager.activateRadioButton(user);
 
-            leftSideBarManager.update(user);
+            leftSideBarManager.updateUser(user);
         } else {
             // 로그아웃 상태
             $logInOutButton.attr('type', 'logout');
@@ -51,8 +51,6 @@ const loginManager = new function () {
             friendsBarManager.emptyFriends();
         }
     });
-
-
 
 
     /**
@@ -73,7 +71,7 @@ const loginManager = new function () {
             // 파일들을 데이터베이스에 저장한다.
             // 파일들을 클라우드 저장소에 저장한다.
             firebaseApi.writeFile(currentUser, file);
-            new Card(file);
+            cardManager.cardList.push(new Card(file));
         });
 
     });
@@ -116,7 +114,7 @@ const dropboxManager = new function () {
         _.forEach(files, function (file) {
             firebaseApi.writeFile(currentUser, file);
 
-            new Card(file);
+            cardManager.cardList.push(new Card(file));
         });
     }
 
@@ -129,6 +127,8 @@ const dropboxManager = new function () {
 const Card = function (file) {
 
     const $cardsZone = $('.card-part');
+
+    this.fileName = file.name;
 
     const fileTypeData = convertScreenFileType(file.type);
 
@@ -158,7 +158,7 @@ const Card = function (file) {
 
     // 삭제 기능
     const $trashIcon = $template.find('.i.fas.fa-trash-alt');
-    $trashIcon.on('click', function() {
+    $trashIcon.on('click', function () {
         const currentUser = firebase.auth().currentUser;
 
         $template.remove();
@@ -170,7 +170,7 @@ const Card = function (file) {
 
     // 다운로드 기능
     const $downloadIcon = $template.find('.download-icon');
-    $downloadIcon.on('click', function() {
+    $downloadIcon.on('click', function () {
         const currentUser = firebase.auth().currentUser;
 
         console.log('download');
@@ -178,7 +178,7 @@ const Card = function (file) {
     });
 
     $cardsZone.append($template);
-
+    this.$template = $template;
 
     function convertScreenFileType(fileType) {
         let iconColor;
@@ -217,7 +217,6 @@ const Card = function (file) {
         };
     }
 
-
     function convertProperByteUnit(bytes) {
         let convertedBytesAtScreen;
 
@@ -230,15 +229,16 @@ const Card = function (file) {
         } else if (bytes > Math.pow(1024, 3)) {
             convertedBytesAtScreen = (bytes / Math.pow(1024, 3)).toFixed(1) + 'GB';
         }
-
-
         return convertedBytesAtScreen;
     }
 
 };
 
 
-const cardManager = new function() {
+const cardManager = new function () {
+
+    this.cardList = [];
+
     this.updateCards = async function (user) {
         // 해당유저에 대한 정보를 가지고
         // 데이터베이스에 있는 정보를 보고,
@@ -249,8 +249,9 @@ const cardManager = new function() {
             const querySnapshot = await firebaseStore.readFilesOfTheUser(user);
 
             querySnapshot.forEach(function (doc) {
-                new Card(doc.data());
+                cardManager.cardList.push(new Card(doc.data()));
             });
+            console.log(cardManager.cardList);
 
         } catch (error) {
             console.log("Error getting documents: ", error);
@@ -259,6 +260,7 @@ const cardManager = new function() {
 
     this.emptyCards = function () {
         $('.card-part').empty();
+        this.cardList = [];
     }
 };
 
@@ -272,7 +274,7 @@ const friendsBarManager = new function () {
     this.setupUsers = async function () {
         const querySnapshot = await firebaseStore.readAllUsers();
 
-        querySnapshot.forEach(function(doc) {
+        querySnapshot.forEach(function (doc) {
             // console.log(doc.id, " => ", doc.data());
 
             new Friend(doc.data());
@@ -298,7 +300,7 @@ const friendsBarManager = new function () {
     this.activateRadioButton = (user) => {
         const $friends = $('.travellers-cell');
 
-        $friends.each(function() {
+        $friends.each(function () {
             const $this = $(this);
 
             if ($this.find('.travellers-name-div').text() === user.displayName) {
@@ -323,7 +325,7 @@ const friendsBarManager = new function () {
                 // 카드들을 해당 유저 카드로 업데이트한다.
                 cardManager.updateCards(selectedUser);
                 // 왼쪽바 정보들을 해당 유저 정보로 업데이트한다.
-                leftSideBarManager.update(selectedUser);
+                leftSideBarManager.updateUser(selectedUser);
             }
 
         });
@@ -338,8 +340,8 @@ const friendsBarManager = new function () {
 /**
  * 왼쪽 옵션 창
  */
-const leftSideBarManager = new function() {
-    this.update = (user) => {
+const leftSideBarManager = new function () {
+    this.updateUser = (user) => {
         const $leftSideBar = $('.left-side-bar');
 
         $leftSideBar.find('.profile-photo')
@@ -351,11 +353,42 @@ const leftSideBarManager = new function() {
         $leftSideBar.find('.email')
             .text(user.email);
     };
+
+    const $storageState = $('.storage-description-part');
+    const $storageStateCategories = $storageState.find('.category');
+
+    this.updateStorageState = (user) => {
+        // % 들을 update 한다.
+        const imagePercent =
+
+        $storageState.each(function() {
+
+        });
+    };
 };
 
 
+/**
+ * 검색 기능
+ */
+const searchManager = new function () {
+    const $searchInput = $('#search');
 
+    $searchInput.on('keyup', function () {
+        const $this = $(this);
 
+        const inputValue = $this.val();
+
+        _.forEach(cardManager.cardList, function (card) {
+            console.log(card.fileName);
+            if (card.fileName.indexOf(inputValue) !== -1) {
+                card.$template.removeClass('display-none');
+            } else {
+                card.$template.addClass('display-none');
+            }
+        });
+    })
+};
 
 
 

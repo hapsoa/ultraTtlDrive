@@ -68,16 +68,37 @@ const firebaseStore = new function () { // database
 
     };
 
-    this.readUser = (user) => {
+    this.readUserByUid = async (uid) => {
+        let userData = null;
+        try {
+            const querySnapshot = await db.collection("users").where("uid", "==", uid).get();
+
+            querySnapshot.forEach(function (doc) {
+                console.log(doc.id, " => ", doc.data());
+                console.log(doc.data().uid);
+                userData = doc.data();
+            });
+
+
+        }
+        catch (error) {
+            console.log("Error getting documents: ", error);
+        }
+
+        if (userData !== null)
+            return userData;
+        else {
+            console.log('error. not have uid');
+        }
 
     };
 
-    this.writeFileMetaData = async (file) => {
-        const currentUser = firebase.auth().currentUser;
+    this.writeFileMetaData = async (currentUser, file) => {
         const filesRef = db.collection("files");
 
         // 파일이름 중복 체크
-        const query = filesRef.where("name", "==", file.name);
+        const query = filesRef.where("name", "==", file.name)
+                        .where("uploader", "==", currentUser.uid);
 
         try {
             const querySnapshot = await query.get();
@@ -86,8 +107,6 @@ const firebaseStore = new function () { // database
                 console.log('not empty');
 
                 querySnapshot.forEach(async function (doc) {
-                    // doc.data() is never undefined for query doc snapshots
-                    console.log(doc.id, " => ", doc.data());
 
                     const fileRef = db.collection("files").doc(doc.id);
 
@@ -117,20 +136,28 @@ const firebaseStore = new function () { // database
         }
     };
 
-
-    this.readFilesOfTheUser = (user) => {
-        db.collection("files").where("uploader", "==", user.uid)
-            .get()
+    this.removeFileData = (user, file) => {
+        db.collection("files").where("name", "==", file.name)
+            .where("uploader", "==", user.uid).get()
             .then(function(querySnapshot) {
                 querySnapshot.forEach(function(doc) {
-                    // doc.data() is never undefined for query doc snapshots
-                    console.log(doc.id, " => ", doc.data());
-                    new Card(doc.data());
+
+                    db.collection("files").doc(doc.id).delete();
+
                 });
             })
             .catch(function(error) {
                 console.log("Error getting documents: ", error);
             });
+    };
+
+
+    this.readFilesOfTheUser = async (user) => {
+        return await db.collection("files").where("uploader", "==", user.uid).get();
+    };
+
+    this.readAllUsers = async () => {
+        return await db.collection("users").get();
     };
 
 };
@@ -143,22 +170,51 @@ const firebaseStorage = new function () {
     const storage = firebase.storage();
     const storageRef = storage.ref();
 
-    this.writeFile = (file) => {
+    this.writeFile = (user, file) => {
         // ref를 설정하고,
         let fileRef;
 
         if (file.type.indexOf("image") >= 0) {
-            fileRef = storageRef.child(`images/${file.name}`);
+            fileRef = storageRef.child(`${user.uid}/${file.name}`);
         } else {
-            fileRef = storageRef.child(`etc/${file.name}`);
+            fileRef = storageRef.child(`${user.uid}/${file.name}`);
         }
 
         // 저장을 한다.
         fileRef.put(file).then(function (snapshot) {
             console.log('Uploaded a blob or file!');
         });
-
     };
+
+    this.removeFile = (user, file) => {
+        const fileRef = storageRef.child(`${user.uid}/${file.name}`);
+
+        fileRef.delete().then(function() {
+            // File deleted successfully
+        }).catch(function(error) {
+            // Uh-oh, an error occurred!
+        });
+    };
+
+    this.downloadFile = (user, file) => {
+        const fileRef = storageRef.child(`${user.uid}/${file.name}`);
+
+        fileRef.getDownloadURL().then(function(url) {
+            // `url` is the download URL for 'images/stars.jpg'
+
+            // This can be downloaded directly:
+            // var xhr = new XMLHttpRequest();
+            // xhr.responseType = 'blob';
+            // xhr.onload = function(event) {
+            //     var blob = xhr.response;
+            // };
+            // xhr.open('GET', url);
+            // xhr.send();
+            window.open(url);
+        }).catch(function(error) {
+            // Handle any errors
+        });
+    }
 };
 
 
@@ -226,11 +282,15 @@ const firebaseApi = new function () {
         }
     };
 
-    this.writeFile = (file) => {
-        firebaseStore.writeFileMetaData(file);
-        firebaseStorage.writeFile(file);
+    this.writeFile = (currentUser, file) => {
+        firebaseStore.writeFileMetaData(currentUser, file);
+        firebaseStorage.writeFile(currentUser, file);
     };
 
-
+    this.removeFile = (user, file) => {
+        // 데이터베이스 & 저장소 삭제
+        firebaseStore.removeFileData(user, file);
+        firebaseStorage.removeFile(user, file);
+    };
 
 };

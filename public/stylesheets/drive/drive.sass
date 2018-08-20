@@ -699,6 +699,8 @@ $loading-height: 80px
       border: 2px solid rgba(217, 53, 42, 0.8)
       .circle
         animation: .3s ease-in-out both bounce
+  > .uid
+    display: none
 
   .photo-div
     width: 35px
@@ -724,6 +726,12 @@ $loading-height: 80px
         background: url("/images/jeff.jpg")
       &.peter
         background: url("/images/peter.jpg")
+    img
+      height: 100%
+      border-radius: 50%
+      //background-size: cover !important
+      //background-position: center !important
+      border: none
   .travellers-name-div
     font-size: 15px
     padding-left: 15px

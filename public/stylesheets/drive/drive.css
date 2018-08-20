@@ -569,6 +569,8 @@ body {
       border: 2px solid rgba(217, 53, 42, 0.8); }
       .travellers-cell[check=on] .radio-box .circle {
         animation: .3s ease-in-out both bounce; }
+  .travellers-cell > .uid {
+    display: none; }
   .travellers-cell .photo-div {
     width: 35px;
     height: 35px; }
@@ -593,6 +595,10 @@ body {
         background: url("/images/jeff.jpg"); }
       .travellers-cell .photo-div .travellers-photo.peter {
         background: url("/images/peter.jpg"); }
+    .travellers-cell .photo-div img {
+      height: 100%;
+      border-radius: 50%;
+      border: none; }
   .travellers-cell .travellers-name-div {
     font-size: 15px;
     padding-left: 15px;

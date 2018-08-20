@@ -1,4 +1,4 @@
-const loginManager = new function() {
+const loginManager = new function () {
 
     const $logInOutButton = $('.nav-profile-field');
     const $uploadButton = $('.browse-button');
@@ -7,7 +7,7 @@ const loginManager = new function() {
     /**
      * Login Logout Button
      */
-    $logInOutButton.on('click', async function() {
+    $logInOutButton.on('click', async function () {
         const $this = $(this);
 
         if ($this.attr('type') === 'logout') {
@@ -24,7 +24,7 @@ const loginManager = new function() {
     /**
      * LogInOut Listener of firebaseApi
      */
-    firebaseApi.setOnAuthStateChangedListener((user) => {
+    firebaseApi.setOnAuthStateChangedListener(async (user) => {
         if (user) {
             // 로그인 상태
             $logInOutButton.find('.nick-name-grid').text(user.displayName);
@@ -37,42 +37,43 @@ const loginManager = new function() {
 
             $uploadButton.removeClass('display-none');
 
-            updateCards(user);
+            cardManager.updateCards(user);
+            await friendsBarManager.setupUsers();
+            friendsBarManager.activateRadioButton(user);
+
+            leftSideBarManager.update(user);
         } else {
             // 로그아웃 상태
             $logInOutButton.attr('type', 'logout');
             $uploadButton.addClass('display-none');
+
+            cardManager.emptyCards();
+            friendsBarManager.emptyFriends();
         }
     });
 
-    function updateCards(user) {
-        // 해당유저에 대한 정보를 가지고
-        // 데이터베이스에 있는 정보를 보고,
 
-        firebaseStore.readFilesOfTheUser(user);
-
-        // 화면에 출력한다.
-    }
 
 
     /**
      * File upload button
      */
-    $uploadButton.on('click', function() {
+    $uploadButton.on('click', function () {
         $('input[type="file"]').trigger('click');
     });
     const $internalUploadButton = $('input[type="file"]');
-    $internalUploadButton.on('click', function(e) {
+    $internalUploadButton.on('click', function (e) {
         e.stopPropagation();
     });
-    $internalUploadButton.on('change', function() {
+    $internalUploadButton.on('change', function () {
+        const currentUser = firebase.auth().currentUser;
         const selectedFiles = document.getElementById('hiddenUploadButton').files;
 
-        _.forEach(selectedFiles, function(file) {
-            console.log(file);
+        _.forEach(selectedFiles, function (file) {
             // 파일들을 데이터베이스에 저장한다.
             // 파일들을 클라우드 저장소에 저장한다.
-            firebaseApi.writeFile(file);
+            firebaseApi.writeFile(currentUser, file);
+            new Card(file);
         });
 
     });
@@ -110,9 +111,10 @@ const dropboxManager = new function () {
     }
 
     function handleFiles(files) {
+        const currentUser = firebase.auth().currentUser;
         // 저장소로 보낸다.
-        _.forEach(files, function(file) {
-            firebaseApi.writeFile(file);
+        _.forEach(files, function (file) {
+            firebaseApi.writeFile(currentUser, file);
 
             new Card(file);
         });
@@ -124,7 +126,7 @@ const dropboxManager = new function () {
 /**
  * Card constructor
  */
-const Card = function(file) {
+const Card = function (file) {
 
     const $cardsZone = $('.card-part');
 
@@ -152,7 +154,30 @@ const Card = function(file) {
             </div>
         </div>`;
 
-    $cardsZone.append(template);
+    const $template = $(template);
+
+    // 삭제 기능
+    const $trashIcon = $template.find('.i.fas.fa-trash-alt');
+    $trashIcon.on('click', function() {
+        const currentUser = firebase.auth().currentUser;
+
+        $template.remove();
+
+        // 데이터베이스와 저장소를 모두 삭제한다.
+        firebaseApi.removeFile(currentUser, file);
+
+    });
+
+    // 다운로드 기능
+    const $downloadIcon = $template.find('.download-icon');
+    $downloadIcon.on('click', function() {
+        const currentUser = firebase.auth().currentUser;
+
+        console.log('download');
+        firebaseStorage.downloadFile(currentUser, file);
+    });
+
+    $cardsZone.append($template);
 
 
     function convertScreenFileType(fileType) {
@@ -185,9 +210,11 @@ const Card = function(file) {
             cardImageIcon = "i fas fa-font";
         }
 
-        return { iconColor: iconColor,
-                cardImageIcon: cardImageIcon,
-                convertedFileType: convertedFileType };
+        return {
+            iconColor: iconColor,
+            cardImageIcon: cardImageIcon,
+            convertedFileType: convertedFileType
+        };
     }
 
 
@@ -211,16 +238,120 @@ const Card = function(file) {
 };
 
 
-const leftSideBarManager = new function() {
+const cardManager = new function() {
+    this.updateCards = async function (user) {
+        // 해당유저에 대한 정보를 가지고
+        // 데이터베이스에 있는 정보를 보고,
+        // 화면에 출력한다.
+        this.emptyCards();
 
-    this.updateUser = function() {
+        try {
+            const querySnapshot = await firebaseStore.readFilesOfTheUser(user);
 
+            querySnapshot.forEach(function (doc) {
+                new Card(doc.data());
+            });
+
+        } catch (error) {
+            console.log("Error getting documents: ", error);
+        }
     };
+
+    this.emptyCards = function () {
+        $('.card-part').empty();
+    }
+};
+
+
+/**
+ * 친구창
+ */
+const friendsBarManager = new function () {
+    const $friendsBox = $('.travellers-part');
+
+    this.setupUsers = async function () {
+        const querySnapshot = await firebaseStore.readAllUsers();
+
+        querySnapshot.forEach(function(doc) {
+            // console.log(doc.id, " => ", doc.data());
+
+            new Friend(doc.data());
+        });
+    };
+
+    const Friend = function (user) {
+
+        const template = `<div class="travellers-cell flex align-center">
+            <div class="photo-div">
+                <img src="${user.photoURL}" alt="personal face">
+            </div>
+            <div class="travellers-name-div flex-1">${user.displayName}</div>
+            <div class="radio-box flex align-center">
+                <div class="circle"></div>
+            </div>
+            <div class="uid">${user.uid}</div>
+        </div>`;
+
+        $friendsBox.append(template);
+    };
+
+    this.activateRadioButton = (user) => {
+        const $friends = $('.travellers-cell');
+
+        $friends.each(function() {
+            const $this = $(this);
+
+            if ($this.find('.travellers-name-div').text() === user.displayName) {
+                $this.attr('check', 'on');
+            }
+        });
+
+        $friends.on('click', async function () {
+            const $this = $(this);
+            $this.find('.radio-box').addClass('.animation-bounce-in');
+
+            const $part = $('.travellers-part');
+            if ($this.attr('check') !== 'on') {
+                // 다른 유저 클릭 시
+                $part.find($friends).attr('check', '');
+                $this.attr('check', 'on');
+
+
+                const selectedUser = await firebaseStore.readUserByUid(
+                    $this.find('.uid').text());
+                console.log(selectedUser);
+                // 카드들을 해당 유저 카드로 업데이트한다.
+                cardManager.updateCards(selectedUser);
+                // 왼쪽바 정보들을 해당 유저 정보로 업데이트한다.
+                leftSideBarManager.update(selectedUser);
+            }
+
+        });
+    };
+
+    this.emptyFriends = () => $friendsBox.empty();
+
 
 };
 
 
+/**
+ * 왼쪽 옵션 창
+ */
+const leftSideBarManager = new function() {
+    this.update = (user) => {
+        const $leftSideBar = $('.left-side-bar');
 
+        $leftSideBar.find('.profile-photo')
+            .css('background-image', `url("${user.photoURL}")`);
+
+        $leftSideBar.find('.nick-name')
+            .text(user.displayName);
+
+        $leftSideBar.find('.email')
+            .text(user.email);
+    };
+};
 
 
 

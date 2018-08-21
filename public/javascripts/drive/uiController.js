@@ -148,6 +148,7 @@ const Card = function (file) {
     this.fileName = file.name;
 
     const fileTypeData = convertScreenFileType(file.type);
+    this.fileType = fileTypeData.convertedFileType;
 
     const iconColor = fileTypeData.iconColor;
     const cardImageIcon = fileTypeData.cardImageIcon;
@@ -268,7 +269,6 @@ const cardManager = new function () {
             querySnapshot.forEach(function (doc) {
                 cardManager.cardList.push(new Card(doc.data()));
             });
-            console.log(cardManager.cardList);
 
         } catch (error) {
             console.log("Error getting documents: ", error);
@@ -343,6 +343,8 @@ const friendsBarManager = new function () {
                 // 왼쪽바 정보들을 해당 유저 정보로 업데이트한다.
                 leftSideBarManager.updateUser(selectedUser);
                 leftSideBarManager.updateStorageState(selectedUser);
+                const $categoryButtons = $('.category-card-outer');
+                $categoryButtons.removeAttr('type');
 
                 const currentUser = firebase.auth().currentUser;
                 const $uploadButton = $('.browse-button');
@@ -385,21 +387,20 @@ const leftSideBarManager = new function () {
     const $storageState = $('.storage-grid');
     const $storageStateCategories = $storageState.find('.category');
     // const totalCapacity = 10 * Math.pow(1024, 3); // 10GB
-    const totalCapacity = 100 * Math.pow(1024, 1);
+    const totalCapacity = 3 * Math.pow(1024, 2);
     this.updateStorageState = async (user) => {
         // % 들을 update 한다.
-        let imagePercent = 0;
-        let applicationPercent = 0;
-        let textPercent = 0;
-        let audioPercent = 0;
-        let videoPercent = 0;
-        let etcPercent = 0;
+        let imageSectionCapacity = 0;
+        let applicationSectionCapacity = 0;
+        let textSectionCapacity = 0;
+        let audioSectionCapacity = 0;
+        let videoSectionCapacity = 0;
+        let etcSectionCapacity = 0;
 
         const files = await firebaseStore.readFilesOfTheUser(user);
 
         // typeString 과 데이터베이스의 files 의 type를 비교한다.
         files.forEach((function(doc) {
-
             const fileData = doc.data();
 
             $storageStateCategories.each(function() {
@@ -416,45 +417,128 @@ const leftSideBarManager = new function () {
 
                     switch(typeString) {
                         case 'image':
-                            imagePercent += fileData.size;
+                            imageSectionCapacity += fileData.size;
                             break;
                         case 'application':
-                            applicationPercent += fileData.size;
+                            applicationSectionCapacity += fileData.size;
                             break;
                         case 'text':
-                            textPercent += fileData.size;
+                            textSectionCapacity += fileData.size;
                             break;
                         case 'audio':
-                            audioPercent += fileData.size;
+                            audioSectionCapacity += fileData.size;
                             break;
                         case 'video':
-                            videoPercent += fileData.size;
+                            videoSectionCapacity += fileData.size;
                             break;
                     }
                 }
-
                 if (fileData.type === "" && typeString === 'etc') {
-                    etcPercent += fileData.size;
+                    etcSectionCapacity += fileData.size;
                 }
-
             });
         }));
 
-        imagePercent = toPercent(imagePercent, totalCapacity);
-        applicationPercent = toPercent(imagePercent, totalCapacity);
-        textPercent = toPercent(imagePercent, totalCapacity);
-        audioPercent = toPercent(imagePercent, totalCapacity);
-        videoPercent = toPercent(imagePercent, totalCapacity);
-        etcPercent = toPercent(imagePercent, totalCapacity);
+        const imagePercent = toPercent(imageSectionCapacity, totalCapacity);
+        const applicationPercent = toPercent(applicationSectionCapacity, totalCapacity);
+        const textPercent = toPercent(textSectionCapacity, totalCapacity);
+        const audioPercent = toPercent(audioSectionCapacity, totalCapacity);
+        const videoPercent = toPercent(videoSectionCapacity, totalCapacity);
+        const etcPercent = toPercent(etcSectionCapacity, totalCapacity);
 
-        console.log(imagePercent, applicationPercent, textPercent,
-            audioPercent, videoPercent, etcPercent);
+        $storageStateCategories.each(function() {
+            const $this = $(this);
 
+            const typeString = $this.find('.text').clone()    //clone the element
+                .children() //select all the children
+                .remove()   //remove all the children
+                .end()  //again go back to selected element
+                .text()
+                .toLowerCase();
+
+            switch (typeString) {
+                case 'image':
+                    $this.find('i').text(' ' + imagePercent + '%');
+                    break;
+                case 'application':
+                    $this.find('i').text(' ' + applicationPercent + '%');
+                    break;
+                case 'text':
+                    $this.find('i').text(' ' + textPercent + '%');
+                    break;
+                case 'audio':
+                    $this.find('i').text(' ' + audioPercent + '%');
+                    break;
+                case 'video':
+                    $this.find('i').text(' ' + videoPercent + '%');
+                    break;
+                default :
+                    $this.find('i').text(' ' + etcPercent + '%');
+                    break;
+            }
+
+        });
+
+        // 바를 조정한다.
+        const $barDetailValue = $storageState.find('.used-storage-part');
+        const totalSectionCapacity = imageSectionCapacity + applicationSectionCapacity +
+            textSectionCapacity + audioSectionCapacity + videoSectionCapacity +
+            etcSectionCapacity;
+        $barDetailValue.text(
+            `${mathManager.convertProperByteUnit(totalSectionCapacity)} / 
+            ${mathManager.convertProperByteUnit(totalCapacity)}`);
+
+        const $storageBar = $storageState.find('.storage-part');
+        const $imageBar = $storageBar.find('.type-image');
+        const $applicationBar = $storageBar.find('.type-code');
+        const $textBar = $storageBar.find('.type-text');
+        const $audioBar = $storageBar.find('.type-sound');
+        const $videoBar = $storageBar.find('.type-video');
+        const $etcBar = $storageBar.find('.type-etc');
+
+        $imageBar.css('width', `${imagePercent}%`);
+        $applicationBar.css('width', `${applicationPercent}%`);
+        $textBar.css('width', `${textPercent}%`);
+        $audioBar.css('width', `${audioPercent}%`);
+        $videoBar.css('width', `${videoPercent}%`);
+        $etcBar.css('width', `${etcPercent}%`);
     };
 
     function toPercent(sectionValue, totalValue) {
-        return (sectionValue / totalValue * 100).toFixed(1);
+        return (sectionValue / totalValue * 100).toFixed(0);
     }
+
+    const $categoryButtonZone = $('.category-card-grid');
+    const $categoryButtons = $categoryButtonZone.find('.category-card-outer');
+    $categoryButtons.on('click', function() {
+        const $this = $(this);
+        const type = $this.find('.name').text();
+        findFilesInTheCategory(type);
+
+        $categoryButtons.attr('type', 'deselected');
+        $this.removeAttr('type');
+    });
+
+    const $categoryResetButton = $('#category-reset');
+    $categoryResetButton.on('click', function() {
+        _.forEach(cardManager.cardList, function(card) {
+            card.$template.removeClass('display-none-important');
+        });
+
+        $categoryButtons.removeAttr('type');
+    });
+
+    function findFilesInTheCategory(type) {
+        _.forEach(cardManager.cardList, function(card) {
+            console.log(card.fileType);
+            if (card.fileType === type) {
+                card.$template.removeClass('display-none-important');
+            } else {
+                card.$template.addClass('display-none-important');
+            }
+        });
+    }
+
 };
 
 
@@ -480,7 +564,26 @@ const searchManager = new function () {
     })
 };
 
+const mathManager = new function() {
+    function convertProperByteUnit(bytes) {
+        let convertedBytesAtScreen;
 
+        if (bytes <= 1024) {
+            convertedBytesAtScreen = bytes + 'B';
+        } else if (bytes > 1024 && bytes <= Math.pow(1024, 2)) {
+            convertedBytesAtScreen = (bytes / 1024).toFixed(1) + 'KB';
+        } else if (bytes > Math.pow(1024, 2) && bytes <= Math.pow(1024, 3)) {
+            convertedBytesAtScreen = (bytes / Math.pow(1024, 2)).toFixed(1) + 'MB';
+        } else if (bytes > Math.pow(1024, 3)) {
+            convertedBytesAtScreen = (bytes / Math.pow(1024, 3)).toFixed(1) + 'GB';
+        }
+        return convertedBytesAtScreen;
+    }
+
+    return {
+        convertProperByteUnit
+    }
+};
 
 
 

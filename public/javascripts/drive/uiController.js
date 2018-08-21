@@ -37,15 +37,20 @@ const loginManager = new function () {
 
             $uploadButton.removeClass('display-none');
 
+            dropboxManager.on();
+
             cardManager.updateCards(user);
             await friendsBarManager.setupUsers();
             friendsBarManager.activateRadioButton(user);
 
             leftSideBarManager.updateUser(user);
+            leftSideBarManager.updateStorageState(user);
         } else {
             // 로그아웃 상태
             $logInOutButton.attr('type', 'logout');
             $uploadButton.addClass('display-none');
+
+            dropboxManager.off();
 
             cardManager.emptyCards();
             friendsBarManager.emptyFriends();
@@ -84,9 +89,21 @@ const loginManager = new function () {
  */
 const dropboxManager = new function () {
     const dropbox = document.getElementById("dropbox");
-    dropbox.addEventListener("dragenter", dragenter, false);
-    dropbox.addEventListener("dragover", dragover, false);
-    dropbox.addEventListener("drop", drop, false);
+    const $dropbox = $('#dropbox');
+
+    this.on = () => {
+        dropbox.addEventListener("dragenter", dragenter, false);
+        dropbox.addEventListener("dragover", dragover, false);
+        dropbox.addEventListener("drop", drop, false);
+    };
+
+    this.off = () => {
+        dropbox.removeEventListener("dragenter", dragenter);
+        dropbox.removeEventListener("dragover", dragover);
+        dropbox.removeEventListener("drop", drop);
+        // $dropbox.unbind();
+        // console.log('yes unbind');
+    };
 
     function dragenter(e) {
         e.stopPropagation();
@@ -318,14 +335,25 @@ const friendsBarManager = new function () {
                 $part.find($friends).attr('check', '');
                 $this.attr('check', 'on');
 
-
                 const selectedUser = await firebaseStore.readUserByUid(
                     $this.find('.uid').text());
-                console.log(selectedUser);
+
                 // 카드들을 해당 유저 카드로 업데이트한다.
                 cardManager.updateCards(selectedUser);
                 // 왼쪽바 정보들을 해당 유저 정보로 업데이트한다.
                 leftSideBarManager.updateUser(selectedUser);
+                leftSideBarManager.updateStorageState(selectedUser);
+
+                const currentUser = firebase.auth().currentUser;
+                const $uploadButton = $('.browse-button');
+                if (currentUser.uid === selectedUser.uid) {
+                    dropboxManager.on();
+                    $uploadButton.removeClass('display-none');
+                }
+                else {
+                    dropboxManager.off();
+                    $uploadButton.addClass('display-none');
+                }
             }
 
         });
@@ -354,17 +382,79 @@ const leftSideBarManager = new function () {
             .text(user.email);
     };
 
-    const $storageState = $('.storage-description-part');
+    const $storageState = $('.storage-grid');
     const $storageStateCategories = $storageState.find('.category');
-
-    this.updateStorageState = (user) => {
+    // const totalCapacity = 10 * Math.pow(1024, 3); // 10GB
+    const totalCapacity = 100 * Math.pow(1024, 1);
+    this.updateStorageState = async (user) => {
         // % 들을 update 한다.
-        const imagePercent =
+        let imagePercent = 0;
+        let applicationPercent = 0;
+        let textPercent = 0;
+        let audioPercent = 0;
+        let videoPercent = 0;
+        let etcPercent = 0;
 
-        $storageState.each(function() {
+        const files = await firebaseStore.readFilesOfTheUser(user);
 
-        });
+        // typeString 과 데이터베이스의 files 의 type를 비교한다.
+        files.forEach((function(doc) {
+
+            const fileData = doc.data();
+
+            $storageStateCategories.each(function() {
+                const $this = $(this);
+
+                const typeString = $this.find('.text').clone()    //clone the element
+                    .children() //select all the children
+                    .remove()   //remove all the children
+                    .end()  //again go back to selected element
+                    .text()
+                    .toLowerCase();
+
+                if (fileData.type.split('/')[0] === typeString) {
+
+                    switch(typeString) {
+                        case 'image':
+                            imagePercent += fileData.size;
+                            break;
+                        case 'application':
+                            applicationPercent += fileData.size;
+                            break;
+                        case 'text':
+                            textPercent += fileData.size;
+                            break;
+                        case 'audio':
+                            audioPercent += fileData.size;
+                            break;
+                        case 'video':
+                            videoPercent += fileData.size;
+                            break;
+                    }
+                }
+
+                if (fileData.type === "" && typeString === 'etc') {
+                    etcPercent += fileData.size;
+                }
+
+            });
+        }));
+
+        imagePercent = toPercent(imagePercent, totalCapacity);
+        applicationPercent = toPercent(imagePercent, totalCapacity);
+        textPercent = toPercent(imagePercent, totalCapacity);
+        audioPercent = toPercent(imagePercent, totalCapacity);
+        videoPercent = toPercent(imagePercent, totalCapacity);
+        etcPercent = toPercent(imagePercent, totalCapacity);
+
+        console.log(imagePercent, applicationPercent, textPercent,
+            audioPercent, videoPercent, etcPercent);
+
     };
+
+    function toPercent(sectionValue, totalValue) {
+        return (sectionValue / totalValue * 100).toFixed(1);
+    }
 };
 
 

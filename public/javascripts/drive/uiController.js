@@ -2,7 +2,7 @@ const loginManager = new function () {
 
     const $logInOutButton = $('.nav-profile-field');
     const $uploadButton = $('.browse-button');
-    const $cardsZone = $('.card-part');
+    const $userDetailInfo = $('.icon-button-field[command=cog]');
 
     /**
      * Login Logout Button
@@ -38,6 +38,10 @@ const loginManager = new function () {
             $uploadButton.removeClass('display-none');
 
             dropboxManager.on();
+            $userDetailInfo.on('click', function () {
+                const $sidebar = $('.side-bar-cover');
+                $sidebar.attr('type', 'true');
+            });
 
             cardManager.updateCards(user);
             await friendsBarManager.setupUsers();
@@ -51,6 +55,7 @@ const loginManager = new function () {
             $uploadButton.addClass('display-none');
 
             dropboxManager.off();
+            $userDetailInfo.unbind();
 
             cardManager.emptyCards();
             friendsBarManager.emptyFriends();
